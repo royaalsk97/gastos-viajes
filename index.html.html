@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Gastos TH">
+<title>Gastos Tailandia</title>
+<style>
+  :root { color-scheme: light; --p:#0F4C5C; --a:#E07A3E; --bg:#F7F5F0; --card:#fff; }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  body { margin:0; font-family:-apple-system,'Segoe UI',Roboto,sans-serif; background:var(--bg); color:#222; padding:14px 14px 40px; }
+  h1 { font-size:17px; margin:4px 0 2px; color:var(--p); }
+  .sub { font-size:12px; color:#888; margin-bottom:12px; }
+  .card { background:var(--card); border-radius:14px; padding:14px; margin-bottom:12px; box-shadow:0 1px 4px rgba(0,0,0,.07); }
+  input[type=text], input[type=number] { width:100%; font-size:17px; padding:13px; border:1.5px solid #ddd; border-radius:11px; background:#fff; }
+  input:focus { outline:none; border-color:var(--a); }
+  .chips { display:flex; flex-wrap:wrap; gap:7px; margin:11px 0; }
+  .chip { padding:8px 13px; border-radius:20px; background:#eee; font-size:13px; font-weight:600; color:#555; border:none; }
+  .chip.on { background:var(--p); color:#fff; }
+  .row { display:flex; gap:8px; align-items:center; }
+  button.add { flex:1; background:var(--a); color:#fff; border:none; padding:14px; border-radius:11px; font-size:16px; font-weight:700; }
+  .cur { display:flex; gap:6px; }
+  .cur button { padding:12px 15px; border-radius:11px; border:1.5px solid #ddd; background:#fff; font-weight:700; font-size:15px; color:#666; }
+  .cur button.on { background:var(--p); color:#fff; border-color:var(--p); }
+  .tot { display:flex; justify-content:space-between; align-items:baseline; margin-bottom:9px; }
+  .tot b { font-size:26px; color:var(--p); }
+  .bar { height:9px; background:#eee; border-radius:5px; overflow:hidden; margin:5px 0 3px; }
+  .bar span { display:block; height:100%; background:var(--a); }
+  .catline { display:flex; justify-content:space-between; padding:8px 0; border-bottom:1px solid #f0f0f0; font-size:14px; }
+  .catline:last-child { border:none; }
+  .catline i { font-style:normal; color:#999; font-size:12px; margin-left:6px; }
+  .item { display:flex; justify-content:space-between; align-items:center; padding:9px 0; border-bottom:1px solid #f2f2f2; font-size:14px; }
+  .item small { color:#999; display:block; font-size:11px; }
+  .del { background:none; border:none; color:#c66; font-size:19px; padding:0 6px; }
+  .mini { font-size:12px; color:#888; }
+  .foot { display:flex; gap:8px; margin-top:10px; }
+  .foot button { flex:1; background:#eee; border:none; padding:11px; border-radius:10px; font-size:13px; font-weight:600; color:#555; }
+</style>
+</head>
+<body>
+
+<h1>💸 Gastos Tailandia</h1>
+<div class="sub">Escribe el importe y toca la categoría. Ej: <b>400</b> → Comida</div>
+
+<div class="card">
+  <div class="cur" style="margin-bottom:9px">
+    <button id="cB" class="on" onclick="setCur('THB')">฿ Baht</button>
+    <button id="cE" onclick="setCur('EUR')">€ Euro</button>
+    <input type="number" id="rate" value="39" style="width:78px;text-align:center;font-size:14px;padding:8px" title="THB por 1 EUR">
+    <span class="mini" style="align-self:center">฿/€</span>
+  </div>
+  <input type="text" id="amt" inputmode="decimal" placeholder="Importe (ej: 400)" autocomplete="off">
+  <div class="chips" id="chips"></div>
+  <input type="text" id="note" placeholder="Nota opcional (ej: pad thai)" autocomplete="off" style="font-size:14px;padding:10px">
+  <div class="row" style="margin-top:9px"><button class="add" onclick="add()">Añadir gasto</button></div>
+</div>
+
+<div class="card">
+  <div class="tot" style="margin:0 0 8px"><span style="font-weight:700;font-size:14px">📋 Volcado del día</span>
+    <span class="mini">pega tus notas</span></div>
+  <div class="mini" style="margin-bottom:7px">Una línea por gasto: <b>400 comida pad thai</b> · <b>12e transporte</b> · si no pones categoría va a Comida.</div>
+  <textarea id="bulk" rows="5" placeholder="400 comida pad thai&#10;150 transporte tuktuk&#10;800 actividades kayak&#10;20e caprichos" style="width:100%;font-size:15px;padding:11px;border:1.5px solid #ddd;border-radius:11px;font-family:inherit"></textarea>
+  <div class="row" style="margin-top:8px">
+    <button class="add" style="background:var(--p)" onclick="preview()">Previsualizar</button>
+  </div>
+  <div id="prev"></div>
+</div>
+
+<div class="card">
+  <div class="tot"><span>Total del viaje</span><b id="grand">0 €</b></div>
+  <div class="mini" id="split"></div>
+  <div class="bar"><span id="barfill" style="width:0%"></span></div>
+  <div class="mini" id="budget"></div>
+  <div style="margin-top:12px" id="cats"></div>
+</div>
+
+<div class="card">
+  <div class="tot" style="margin:0 0 6px"><span style="font-weight:700;font-size:14px">Últimos movimientos</span><span class="mini" id="count"></span></div>
+  <div id="list"></div>
+  <div class="foot">
+    <button onclick="exportCsv()">Exportar CSV</button>
+    <button onclick="wipe()">Borrar todo</button>
+  </div>
+</div>
+
+<script>
+const CATS = ['Comida','Transporte','Alojamiento','Actividades','Caprichos','Vuelo','Inversión'];
+const KEY = 'gastos_tailandia_v1';
+let cur = 'THB', sel = 'Comida', data = [];
+
+function load() {
+  try { const r = localStorage.getItem(KEY); if (r) data = JSON.parse(r); } catch(e) {}
+  if (!data.length) {
+    data = [
+      { id:1, cat:'Vuelo', eur:600, cur:'EUR', amt:600, note:'Vuelo ida/vuelta (pagado)', d:'2026-09-01' },
+      { id:2, cat:'Alojamiento', eur:101, cur:'EUR', amt:101, note:'Bangkok 20-27 oct (pagado)', d:'2026-09-07' }
+    ];
+    save();
+  }
+}
+function save() { try { localStorage.setItem(KEY, JSON.stringify(data)); } catch(e) { alert('No se pudo guardar. Exporta el CSV para no perder datos.'); } }
+function rate() { return parseFloat(document.getElementById('rate').value) || 39; }
+function setCur(c) { cur=c; document.getElementById('cB').className = c==='THB'?'on':''; document.getElementById('cE').className = c==='EUR'?'on':''; }
+function chips() {
+  document.getElementById('chips').innerHTML = CATS.map(c =>
+    `<button class="chip ${c===sel?'on':''}" onclick="sel='${c}';chips()">${c}</button>`).join('');
+}
+function add() {
+  const v = parseFloat(document.getElementById('amt').value.replace(',','.'));
+  if (!v || v<=0) { document.getElementById('amt').focus(); return; }
+  const eur = cur==='EUR' ? v : v/rate();
+  data.unshift({ id:Date.now(), cat:sel, eur:eur, cur:cur, amt:v, note:document.getElementById('note').value.trim(), d:new Date().toISOString().slice(0,10) });
+  document.getElementById('amt').value=''; document.getElementById('note').value='';
+  save(); render();
+}
+function del(id) { data = data.filter(x=>x.id!==id); save(); render(); }
+
+/* ---------- Volcado por lotes ---------- */
+const norm = s => s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'');
+function matchCat(w) {
+  const n = norm(w); if (n.length < 3) return null;
+  return CATS.find(c => norm(c).startsWith(n)) || null;
+}
+function parseLine(line) {
+  const raw = line.trim(); if (!raw) return null;
+  const toks = raw.split(/\s+/);
+  let amt = null, moneda = 'THB', cat = null, note = [];
+  for (let i = 0; i < toks.length; i++) {
+    const t = toks[i];
+    if (amt === null) {
+      const m = t.match(/^([\d]+(?:[.,]\d+)?)\s*(€|eur|e|฿|thb|b|baht)?$/i);
+      if (m) {
+        amt = parseFloat(m[1].replace(',','.'));
+        if (m[2] && /^(€|eur|e)$/i.test(m[2])) moneda = 'EUR';
+        const nx = toks[i+1] ? toks[i+1].toLowerCase() : '';
+        if (/^(€|eur|euros?)$/.test(nx)) { moneda='EUR'; i++; }
+        else if (/^(฿|thb|baht|bath)$/.test(nx)) { moneda='THB'; i++; }
+        continue;
+      }
+    }
+    if (!cat) { const c = matchCat(t); if (c) { cat = c; continue; } }
+    note.push(t);
+  }
+  if (amt === null || amt <= 0) return { error: raw };
+  return { amt, moneda, cat: cat || 'Comida', note: note.join(' '), auto: !cat };
+}
+function preview() {
+  const lines = document.getElementById('bulk').value.split('\n').map(parseLine).filter(Boolean);
+  if (!lines.length) { document.getElementById('prev').innerHTML = ''; return; }
+  window._pend = lines.filter(l => !l.error);
+  const bad = lines.filter(l => l.error);
+  let html = '<div style="margin-top:11px;border-top:1px solid #eee;padding-top:9px">';
+  html += window._pend.map(l =>
+    `<div class="item"><div><b>${l.cat}</b>${l.auto?' <i style="color:#c88;font-style:normal;font-size:11px">(por defecto)</i>':''} · ${l.amt} ${l.moneda==='THB'?'฿':'€'}
+     <small>${l.note||'sin nota'}</small></div><b>${(l.moneda==='EUR'?l.amt:l.amt/rate()).toFixed(1)} €</b></div>`).join('');
+  if (bad.length) html += `<div class="mini" style="color:#c55;margin-top:7px">No entendí: ${bad.map(b=>'"'+b.error+'"').join(', ')}</div>`;
+  const t = window._pend.reduce((s,l)=>s+(l.moneda==='EUR'?l.amt:l.amt/rate()),0);
+  html += `<div class="tot" style="margin-top:10px"><span>${window._pend.length} gastos</span><b style="font-size:19px">${t.toFixed(1)} €</b></div>
+    <button class="add" style="width:100%" onclick="commit()">Confirmar e importar</button></div>`;
+  document.getElementById('prev').innerHTML = html;
+}
+function commit() {
+  const d = new Date().toISOString().slice(0,10);
+  (window._pend||[]).forEach((l,i) => data.unshift({
+    id: Date.now()+i, cat:l.cat, cur:l.moneda, amt:l.amt,
+    eur: l.moneda==='EUR' ? l.amt : l.amt/rate(), note:l.note, d
+  }));
+  window._pend = []; document.getElementById('bulk').value=''; document.getElementById('prev').innerHTML='';
+  save(); render();
+}
+function wipe() { if (confirm('¿Borrar TODOS los gastos? Exporta antes si quieres guardarlos.')) { data=[]; save(); load(); render(); } }
+function exportCsv() {
+  const rows = [['fecha','categoria','importe','moneda','eur','nota'], ...data.map(x=>[x.d,x.cat,x.amt,x.cur,x.eur.toFixed(2),x.note||''])];
+  const csv = rows.map(r=>r.join(';')).join('\n');
+  const a = document.createElement('a');
+  a.href = 'data:text/csv;charset=utf-8,' + encodeURIComponent(csv);
+  a.download = 'gastos_tailandia.csv'; a.click();
+}
+function render() {
+  const tot = data.reduce((s,x)=>s+x.eur,0);
+  const inv = data.filter(x=>x.cat==='Inversión').reduce((s,x)=>s+x.eur,0);
+  const fijo = data.filter(x=>x.cat==='Vuelo').reduce((s,x)=>s+x.eur,0);
+  const vida = tot - inv - fijo;
+  document.getElementById('grand').textContent = tot.toFixed(0)+' €';
+  document.getElementById('split').textContent = `Vida y viaje: ${vida.toFixed(0)} €  ·  Vuelo: ${fijo.toFixed(0)} €  ·  Inversión/reventa: ${inv.toFixed(0)} €`;
+  const target = 3000; // 1.000 €/mes x 3 meses (sin vuelo ni inversión)
+  document.getElementById('barfill').style.width = Math.min(100, vida/target*100)+'%';
+  document.getElementById('budget').textContent = `Presupuesto de vida: ${vida.toFixed(0)} € de ${target} € (1.000 €/mes × 3) · quedan ${(target-vida).toFixed(0)} €`;
+  document.getElementById('cats').innerHTML = CATS.map(c=>{
+    const s = data.filter(x=>x.cat===c).reduce((a,x)=>a+x.eur,0);
+    const n = data.filter(x=>x.cat===c).length;
+    return s>0 ? `<div class="catline"><span>${c}<i>${n}</i></span><b>${s.toFixed(0)} €</b></div>` : '';
+  }).join('') || '<div class="mini">Sin gastos todavía</div>';
+  document.getElementById('count').textContent = data.length+' registros';
+  document.getElementById('list').innerHTML = data.slice(0,25).map(x=>
+    `<div class="item"><div><b>${x.cat}</b> · ${x.cur==='THB'? x.amt+' ฿' : x.amt+' €'}
+      <small>${x.d}${x.note? ' — '+x.note:''}</small></div>
+      <div style="display:flex;align-items:center;gap:8px"><b>${x.eur.toFixed(1)} €</b>
+      <button class="del" onclick="del(${x.id})">×</button></div></div>`).join('');
+}
+document.getElementById('amt').addEventListener('keydown', e => { if (e.key==='Enter') add(); });
+load(); chips(); render();
+</script>
+</body>
+</html>
